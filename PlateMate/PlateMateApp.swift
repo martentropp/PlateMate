@@ -9,9 +9,28 @@ import SwiftUI
 
 @main
 struct PlateMateApp: App {
+    @StateObject private var equipmentModel = EquipmentModel()
+
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            TabView {
+                ContentView()
+                    .tabItem {
+                        Image(systemName: "scalemass")
+                        Text("Calculator")
+                    }
+                EquipmentSetupView()
+                    .tabItem {
+                        Image(systemName: "gear")
+                        Text("Equipment Setup")
+                    }
+            }
+            .environmentObject(equipmentModel)
+            .onAppear {
+                equipmentModel.unit = "kg" // Default unit is kg
+            }
         }
     }
+
+
 }
