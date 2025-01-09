@@ -12,23 +12,13 @@ struct ContentView: View {
     @State private var plateResults: [String] = [] // Resulted plate selection
     @EnvironmentObject var equipmentModel: EquipmentModel
     @State private var selectedBarbellID: UUID?
+    @State private var showingUnitToggleSheet = false // Control showing the side sheet
 
     var body: some View {
         NavigationView {
             VStack(spacing: 20) {
-                // Toggle for unit
-                Toggle("Use Pounds", isOn: Binding(
-                    get: { equipmentModel.unit == "lbs" },
-                    set: { newValue in
-                        equipmentModel.unit = newValue ? "lbs" : "kg"
-                        // Automatically adjust barbell and plate weights to the new unit
-                        adjustWeightsForUnitChange()
-                    }
-                ))
-                .padding()
-
                 // Input field for target weight
-                TextField("Enter Target Weight", text: $targetWeight)
+                TextField("Enter Target Weight (\(equipmentModel.unit))", text: $targetWeight)
                     .textFieldStyle(RoundedBorderTextFieldStyle())
                     .keyboardType(.decimalPad)
                     .padding()
@@ -51,39 +41,47 @@ struct ContentView: View {
                         equipmentModel.selectedBarbell = nil
                     }
                 }
-//                .onChange(of: selectedBarbellID) { oldValue, newValue in
-//                    if newValue == nil {
-//                        equipmentModel.selectedBarbell = nil
-//                    } else {
-//                        equipmentModel.selectedBarbell = equipmentModel.customBarbells.first { $0.id == id }
-//                    }
-//                }
 
                 // Button to calculate result
                 Button(action: calculatePlates) {
                     Text("Calculate Plates")
-                        .frame(maxWidth: .infinity)
                         .padding()
                         .background(Color.blue)
                         .foregroundColor(.white)
-                        .cornerRadius(8)
+                        .cornerRadius(10)
                 }
                 .padding()
 
+                Text("Results will appear below:")
+                    .foregroundColor(.gray)
+                    .padding(.horizontal)
+                
+                
                 if !plateResults.isEmpty {
-                    List(plateResults, id: \.self) { plate in 
-                        Text (plate) 
+                    List(plateResults, id: \.self) { plate in
+                        Text (plate)
                     }
-                } else {
-                    Text("Results will appear here.")
-                        .foregroundColor(.gray)
-                        .padding()
+                    .scrollContentBackground(.hidden)
                 }
 
                 Spacer()
             }
+            .modifier(KeyboardDismissModifier())
             .navigationTitle("Plate Calculator")
-            .padding()
+            .toolbar {
+                // Add settings button to open the unit toggle side sheet
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button(action: {
+                        showingUnitToggleSheet.toggle()
+                    }) {
+                        Image(systemName: "ellipsis.circle")
+                    }
+                }
+            }
+            .sheet(isPresented: $showingUnitToggleSheet) {
+                UnitToggleSheetView()
+                    .environmentObject(equipmentModel)
+            }
         }
     }
 

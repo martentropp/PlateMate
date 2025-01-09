@@ -8,20 +8,153 @@
 import SwiftUI
 
 class EquipmentModel: ObservableObject {
-    @Published var customBarbells: [Barbell] = []  // Array Of barbells
+    @Published var customBarbells: [Barbell] {
+        didSet {
+            saveData() // Save data when customBarbells changes
+        }
+    }
     @Published var selectedBarbell: Barbell? = nil // Keeps track of selected barbell
-    @Published var unit: String = "kg"             // Default unit
-    @Published var availablePlates: [Plate] = []   // Array of plates
+    @Published var unit: String {
+        didSet {
+            saveData() // Save data when unit changes
+        }
+    }
+    @Published var availablePlates: [Plate] {
+        didSet {
+            saveData() // Save data when availablePlates changes
+        }
+    }
+    
+    // Constants for UserDefaults keys
+    private let barbellsKey = "customBarbells"
+    private let platesKey = "availablePlates"
+    private let unitKey = "unit"
 
-    struct Barbell: Identifiable, Hashable {
-        let id: UUID = UUID()
-        var weight: Double
+    // Initializer
+    init() {
+        // Set default values first
+        self.customBarbells = [Barbell(weight: 32.0),
+                               Barbell(weight: 25.0),
+                               Barbell(weight: 20.0),
+                               Barbell(weight: 15.0),
+                               Barbell(weight: 11.4),
+                               Barbell(weight: 10.0)]
+        self.availablePlates = [Plate(weight: 25.0, quantity: 4),
+                                Plate(weight: 20.0, quantity: 4),
+                                Plate(weight: 15.0, quantity: 6),
+                                Plate(weight: 10.0, quantity: 6),
+                                Plate(weight: 5.0, quantity: 8),
+                                Plate(weight: 2.5, quantity: 8),
+                                Plate(weight: 1, quantity: 8)]
+        self.unit = "kg"
+        
+        // Load saved data after the properties are initialized
+        self.loadSavedData()
+    }
+    
+    // Restore default barbells and plates
+    func restoreDefaultBarbellsAndPlates() {
+        if unit == "kg" {
+            self.customBarbells = [Barbell(weight: 32.0),
+                                   Barbell(weight: 25.0),
+                                   Barbell(weight: 20.0),
+                                   Barbell(weight: 15.0),
+                                   Barbell(weight: 11.4),
+                                   Barbell(weight: 10.0)]
+            self.availablePlates = [Plate(weight: 25.0, quantity: 4),
+                                    Plate(weight: 20.0, quantity: 4),
+                                    Plate(weight: 15.0, quantity: 6),
+                                    Plate(weight: 10.0, quantity: 6),
+                                    Plate(weight: 5.0, quantity: 8),
+                                    Plate(weight: 2.5, quantity: 8),
+                                    Plate(weight: 1, quantity: 8)]
+        } else {
+            self.customBarbells = [Barbell(weight: 70.0),
+                                   Barbell(weight: 55.0),
+                                   Barbell(weight: 45.0),
+                                   Barbell(weight: 33.0),
+                                   Barbell(weight: 25.0),
+                                   Barbell(weight: 22.0)]
+            self.availablePlates = [Plate(weight: 55.0, quantity: 4),
+                                    Plate(weight: 45.0, quantity: 4),
+                                    Plate(weight: 25.0, quantity: 6),
+                                    Plate(weight: 10.0, quantity: 6),
+                                    Plate(weight: 5.0, quantity: 8),
+                                    Plate(weight: 2.5, quantity: 8),
+                                    Plate(weight: 1.25, quantity: 8)]
+        }
     }
 
-    struct Plate: Identifiable, Hashable {
-        let id: UUID = UUID()
+    // Clear all barbells and plates
+    func clearBarbellsAndPlates() {
+        self.customBarbells.removeAll()
+        self.availablePlates.removeAll()
+    }
+
+    // Load saved data from UserDefaults
+    private func loadSavedData() {
+        if let savedBarbells = loadBarbells(),
+           let savedPlates = loadPlates(),
+           let savedUnit = loadUnit() {
+            self.customBarbells = savedBarbells
+            self.availablePlates = savedPlates
+            self.unit = savedUnit
+        }
+    }
+
+    // Load data from UserDefaults
+    private func loadBarbells() -> [Barbell]? {
+        guard let data = UserDefaults.standard.data(forKey: barbellsKey) else { return nil }
+        let decoder = JSONDecoder()
+        return try? decoder.decode([Barbell].self, from: data)
+    }
+
+    private func loadPlates() -> [Plate]? {
+        guard let data = UserDefaults.standard.data(forKey: platesKey) else { return nil }
+        let decoder = JSONDecoder()
+        return try? decoder.decode([Plate].self, from: data)
+    }
+
+    private func loadUnit() -> String? {
+        return UserDefaults.standard.string(forKey: unitKey)
+    }
+
+    // Save data to UserDefaults
+    private func saveData() {
+        let encoder = JSONEncoder()
+        if let barbellsData = try? encoder.encode(customBarbells) {
+            UserDefaults.standard.set(barbellsData, forKey: barbellsKey)
+        }
+        
+        if let platesData = try? encoder.encode(availablePlates) {
+            UserDefaults.standard.set(platesData, forKey: platesKey)
+        }
+        
+        UserDefaults.standard.set(unit, forKey: unitKey)
+    }
+
+    struct Barbell: Identifiable, Hashable, Codable {
+        var id: UUID = UUID()
+        var weight: Double
+        
+        // Custom initializer for decoding
+        init(id: UUID = UUID(), weight: Double) {
+            self.id = id
+            self.weight = weight
+        }
+    }
+
+    struct Plate: Identifiable, Hashable, Codable {
+        var id: UUID = UUID()
         var weight: Double
         var quantity: Int
+        
+        // Custom initializer for decoding
+        init(id: UUID = UUID(), weight: Double, quantity: Int) {
+            self.id = id
+            self.weight = weight
+            self.quantity = quantity
+        }
     }
 
     func convertWeightToUnit(_ weight: Double) -> Double {
